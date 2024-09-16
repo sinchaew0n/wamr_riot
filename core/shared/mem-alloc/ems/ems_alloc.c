@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#define RED_SIZE 32
+
 #include "ems_gc_internal.h"
 
 #if WASM_ENABLE_GC != 0
@@ -364,6 +366,9 @@ alloc_hmu(gc_heap_t *heap, gc_size_t size)
     if (size < GC_SMALLEST_SIZE)
         size = GC_SMALLEST_SIZE;
 
+    /* CHA: if mpu region set, make size to size + RED_SIZE */
+    if (get_region(heap->base_addr) != -1) size += RED_SIZE;
+
     /* check normal list at first*/
     if (HMU_IS_FC_NORMAL(size)) {
         /* find a non-empty slot in normal_node_list with good size*/
@@ -603,6 +608,10 @@ gc_alloc_vo_internal(void *vheap, gc_size_t size, const char *file, int line)
 #endif
 
     ret = hmu_to_obj(hmu);
+    if (get_region(ret) != -1) {
+    	set_shadow(ret, size, 0);
+    	set_shadow(ret + size, tot_size - size - 4, 1);
+    }
     if (tot_size > tot_size_unaligned)
         /* clear buffer appended by GC_ALIGN_8() */
         memset((uint8 *)ret + size, 0, tot_size - tot_size_unaligned);

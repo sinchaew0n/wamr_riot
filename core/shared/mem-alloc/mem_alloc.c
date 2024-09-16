@@ -44,13 +44,13 @@ void *
 mem_allocator_malloc(mem_allocator_t allocator, uint32_t size)
 {
 	/* CHA: modify malloc to add redzone */
-    if (get_linear_memory() != 0) size += RED_SIZE;
+//    if (get_linear_memory() != 0) size += RED_SIZE;
     void *ret = gc_alloc_vo((gc_handle_t)allocator, size);
-    if (get_linear_memory() != 0) {
-	    printf("mem alloc, addr %u\n", ret);
-	    set_shadow(ret, size, 0);
-	    set_shadow(ret + size, RED_SIZE, 1);
-    }
+//    if (get_region(ret) == 4) {
+//	    printf("mem alloc, addr %u\n", ret);
+//	    set_shadow(ret, size, 0);
+//	    set_shadow(ret + size, RED_SIZE, 1);
+//    }
 	/* CHA: finished */
     return ret;
 }
