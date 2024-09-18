@@ -201,38 +201,6 @@ void check_shadow(uint32 addr, uint32 offset) {
 }
 /* CHA: finished */
 
-/* CHA: function to write on linear memory - not used now */
-void write_linear_memory(uint32 *memory, uint32 addr, uint32 value) {
-	*(memory + addr) = value;
-}
-/* CHA: finished */
-
-/* CHA: function for translating original data segment addres to real address */
-uint32 addr_translate(WASMMemoryInstance *memory, uint32 addr, uint32 offset) {
-    /*
-    uint32 viraddr = memory->memory_data + addr + offset;
-    uint32 linaddr = addr + offset;
-    if (linaddr < memory->data_addr_table[0][0] || viraddr >= memory->heap_data) {
-	    //printf("=> addr\n");
-	    return addr;
-    }
-    else {
-	    if (linaddr >= memory->data_addr_table[0][0] && (linaddr < memory->data_addr_table[1][0] || memory->data_addr_table[1][0] == 0)) {
-                    //printf("=> rodata, value %c, return %u\n", *(addr + offset + memory->data_addr_table[0][1] + memory->memory_data), addr + memory->data_addr_table[0][1]);
-                    return addr + memory->data_addr_table[0][1];
-            }
-
-	    else if (linaddr >= memory->data_addr_table[1][0]) {
-		    //printf("=> data, value %u, return %u\n", *(addr + offset + memory->data_addr_table[1][1] + memory->memory_data), addr + memory->data_addr_table[1][1]);
-		    return addr + memory->data_addr_table[1][1];
-	    }
-
-    }
-    */
-    return addr;
-}
-/* CHA: finished */
-
 static inline uint32
 rotl32(uint32 n, uint32 c)
 {
@@ -4427,9 +4395,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-		addr = addr_translate(memory, addr, offset);
-		/* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(4);
                 PUSH_I32(LOAD_I32(maddr));
                 /* CHA: check shadow when loading */
@@ -4450,9 +4415,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(8);
                 PUSH_I64(LOAD_I64(maddr));
 		/* CHA: check shadow when loading */
@@ -4472,9 +4434,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
 		printf("WASM_OP_32_LOAD8_S: addr %u, offset %u, maddr %u, value %u frame_ip %u\n", addr, offset, maddr, LOAD_I32(maddr), frame_ip);
@@ -4495,9 +4454,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
                 CHECK_MEMORY_OVERFLOW(1);
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
 		printf("WASM_OP_32_LOAD8_U: addr %u, offset %u, maddr %u, value %u frame_ip %u\n", addr, offset, maddr, LOAD_I32(maddr), frame_ip);
@@ -4517,9 +4473,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(2);
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4539,9 +4492,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(2);
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4561,9 +4511,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(1);
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4583,9 +4530,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(1);
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4605,9 +4549,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(2);
 		/* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4628,9 +4569,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
 		addr = POP_MEM_OFFSET();
-                /* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(2);
                 /* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4651,9 +4589,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(2);
                 /* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4673,9 +4608,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_uint32(frame_ip, frame_ip_end, flags);
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 CHECK_MEMORY_OVERFLOW(2);
                 /* CHA: check shadow when loading */
                 check_shadow(addr, offset);
@@ -4698,9 +4630,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 frame_sp--;
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 /* CHA: check shadow when storing */
                 check_shadow(addr, offset);
 		printf("WASM_OP_32_STORE: addr %u, offset %u\n", addr, offset);
@@ -4733,9 +4662,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 frame_sp -= 2;
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
 		/* CHA: check shadow when storing */
                 check_shadow(addr, offset);
                 /* CHA: finished */
@@ -4772,9 +4698,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 sval = (uint32)POP_I32();
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
 		/* CHA: check shadow when storing */
                 check_shadow(addr, offset);
                 /* CHA: finished */
@@ -4808,9 +4731,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 read_leb_mem_offset(frame_ip, frame_ip_end, offset);
                 sval = (uint64)POP_I64();
                 addr = POP_MEM_OFFSET();
-		/* CHA: translate address if it is for data segment */
-                addr = addr_translate(memory, addr, offset);
-                /* CHA: finished */
                 /* CHA: check shadow when storing */
                 check_shadow(addr, offset);
                 /* CHA: finished */
@@ -6308,9 +6228,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         uint32 readv;
 
                         addr = POP_MEM_OFFSET();
-			/* CHA: translate address for data section */
-			addr = addr_translate(memory, addr, offset);
-			/* CHA: finished */
 
                         if (opcode == WASM_OP_ATOMIC_I32_LOAD8_U) {
                             CHECK_MEMORY_OVERFLOW(1);
@@ -6346,9 +6263,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         uint64 readv;
 
                         addr = POP_MEM_OFFSET();
-			/* CHA: translate address for data section */
-                        addr = addr_translate(memory, addr, offset);
-                        /* CHA: finished */
 
                         if (opcode == WASM_OP_ATOMIC_I64_LOAD8_U) {
                             CHECK_MEMORY_OVERFLOW(1);
@@ -6391,9 +6305,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         sval = (uint32)POP_I32();
                         addr = POP_MEM_OFFSET();
-			/* CHA: translate address for data section */
-                        addr = addr_translate(memory, addr, offset);
-                        /* CHA: finished */
 
                         if (opcode == WASM_OP_ATOMIC_I32_STORE8) {
                             CHECK_MEMORY_OVERFLOW(1);
@@ -6428,9 +6339,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         sval = (uint64)POP_I64();
                         addr = POP_MEM_OFFSET();
-			/* CHA: translate address for data section */
-                        addr = addr_translate(memory, addr, offset);
-                        /* CHA: finished */
 
                         if (opcode == WASM_OP_ATOMIC_I64_STORE8) {
                             CHECK_MEMORY_OVERFLOW(1);

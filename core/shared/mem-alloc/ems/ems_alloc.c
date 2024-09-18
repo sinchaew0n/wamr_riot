@@ -370,7 +370,9 @@ alloc_hmu(gc_heap_t *heap, gc_size_t size)
     if (get_region(heap->base_addr) != -1) size += RED_SIZE;
 
     /* check normal list at first*/
-    if (HMU_IS_FC_NORMAL(size)) {
+    /* CHA: added condition to find in normal list: 
+     * total normal list size should be more than 1024, for delayed reuse */
+    if (HMU_IS_FC_NORMAL(size) && (heap->total_free_size < size || heap->total_normal_list_size >= 1024)) {
         /* find a non-empty slot in normal_node_list with good size*/
         init_node_idx = (size >> 3);
         for (node_idx = init_node_idx; node_idx < HMU_NORMAL_NODE_CNT;
@@ -896,7 +898,11 @@ gc_free_vo_internal(void *vheap, gc_object_t obj, const char *file, int line)
 #if GC_STAT_DATA != 0
             heap->total_size_freed += size;
 #endif
-
+	    /* CHA: set shadow memory of freed heap object */
+	    if (get_region(hmu) != -1) set_shadow(hmu, size, 1);
+	    /* CHA: increase total normal list size by freed size */
+	    heap->total_normal_list_size += size;
+								    
             if (!hmu_get_pinuse(hmu)) {
                 prev = (hmu_t *)((char *)hmu - *((int *)hmu - 1));
 

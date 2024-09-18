@@ -307,6 +307,7 @@ typedef struct gc_heap_struct {
     gc_size_t init_size;
     gc_size_t highmark_size;
     gc_size_t total_free_size;
+    gc_size_t total_normal_list_size;
 
 #if WASM_ENABLE_GC != 0
     gc_size_t gc_threshold;
