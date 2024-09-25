@@ -147,7 +147,7 @@ struct WASMMemoryInstance {
 #endif
 
     /* CHA: data_base, stack_base, heap_base */
-    uint32 data_base, stack_base, heap_base;
+    uint32 data_base, data_top, stack_base, stack_top, heap_base, heap_top;
 
 };
 

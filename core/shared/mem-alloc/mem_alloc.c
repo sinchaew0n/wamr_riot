@@ -11,6 +11,7 @@
 #include "ems/ems_gc.h"
 
 #define RED_SIZE 32
+extern uint32 seg_red;
 
 mem_allocator_t
 mem_allocator_create(void *mem, uint32_t size)
@@ -43,27 +44,21 @@ mem_allocator_get_heap_struct_size()
 void *
 mem_allocator_malloc(mem_allocator_t allocator, uint32_t size)
 {
-	/* CHA: modify malloc to add redzone */
-//    if (get_linear_memory() != 0) size += RED_SIZE;
     void *ret = gc_alloc_vo((gc_handle_t)allocator, size);
-//    if (get_region(ret) == 4) {
-//	    printf("mem alloc, addr %u\n", ret);
-//	    set_shadow(ret, size, 0);
-//	    set_shadow(ret + size, RED_SIZE, 1);
-//    }
-	/* CHA: finished */
+    printf("mem_allocator_malloc: %lu\n", (unsigned long)ret);
     return ret;
 }
 
 void *
 mem_allocator_realloc(mem_allocator_t allocator, void *ptr, uint32_t size)
 {
-    return gc_realloc_vo((gc_handle_t)allocator, ptr, size);
+    return gc_realloc_vo((gc_handle_t)allocator, ptr, size) + (uintptr_t)(seg_red * 2);
 }
 
 void
 mem_allocator_free(mem_allocator_t allocator, void *ptr)
 {
+	printf("mem_allocator_free: %lu\n", (unsigned long)ptr);
     if (ptr)
         gc_free_vo((gc_handle_t)allocator, ptr);
 }

@@ -31,6 +31,8 @@
 #include "../aot/aot_runtime.h"
 #endif
 
+extern uint32 seg_red;
+
 static void
 set_error_buf(char *error_buf, uint32 error_buf_size, const char *string)
 {
@@ -334,9 +336,12 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
 
     /* CHA: setting heap_offset to heap_offset + initial data segment offset */
     memory->data_base = module_inst->module->data_segments[0]->base_offset.u.i32;
-    heap_offset += memory->data_base;
+    memory->data_top = heap_offset;
+    printf("data_base %u, data_top %u\n", memory->data_base, memory->data_top);
+    heap_offset += (uint32)((uintptr_t)(memory->data_base + 7) & ~7);
     memory->heap_base = heap_offset;
-    printf("heap_offset %u, heap_size %u\n", heap_offset, heap_size);
+    memory->heap_top = memory->heap_base + heap_size;
+    printf("heap_offset %u, heap_top %u, heap_size %u\n", memory->heap_base, memory->heap_top, heap_size);
     /* CHA: finished */
     memory->heap_data = memory->memory_data + heap_offset;
     memory->heap_data_end = memory->heap_data + heap_size;
@@ -3575,7 +3580,10 @@ wasm_module_malloc_internal(WASMModuleInstance *module_inst,
     if (p_native_addr)
         *p_native_addr = addr;
 
-    return (uint64)(addr - memory->memory_data);
+    if (get_linear_memory() == 0) return (uint64)(addr - memory->memory_data);
+    /* CHA: increse addr by segment redzone size */
+    else printf("wasm_module_malloc_internal: %u\n", addr - memory->memory_data + seg_red * 2);
+    return (uint64)(addr - memory->memory_data + seg_red * 2);
 }
 
 uint64
@@ -3636,6 +3644,7 @@ wasm_module_free_internal(WASMModuleInstance *module_inst,
 
     if (ptr) {
         uint8 *addr = memory->memory_data + (uint32)ptr;
+	printf("wasm_module_free_internal: addr %lu\n", (unsigned long)addr);
         uint8 *memory_data_end;
 
         /* memory->memory_data_end may be changed in memory grow */
@@ -3645,7 +3654,10 @@ wasm_module_free_internal(WASMModuleInstance *module_inst,
 
         if (memory->heap_handle && memory->heap_data <= addr
             && addr < memory->heap_data_end) {
+		/* CHA: here */
+	    if (get_linear_memory() == 0)
             mem_allocator_free(memory->heap_handle, addr);
+	    else mem_allocator_free(memory->heap_handle, addr - seg_red * 2);
         }
         else if (module_inst->e->malloc_function
                  && module_inst->e->free_function && memory->memory_data <= addr
@@ -3674,6 +3686,7 @@ wasm_module_realloc(WASMModuleInstance *module_inst, uint64 ptr, uint64 size,
 void
 wasm_module_free(WASMModuleInstance *module_inst, uint64 ptr)
 {
+	printf("wasm_module_free: ptr %lu\n", (unsigned long)ptr);
     wasm_module_free_internal(module_inst, NULL, ptr);
 }
 

@@ -319,6 +319,7 @@ bool
 wasm_runtime_validate_app_addr(WASMModuleInstanceCommon *module_inst_comm,
                                uint64 app_offset, uint64 size)
 {
+	printf("wasm_runtime_validate_app_addr, %lu\n", (unsigned long)app_offset);
     WASMModuleInstance *module_inst = (WASMModuleInstance *)module_inst_comm;
     WASMMemoryInstance *memory_inst;
     uint64 max_linear_memory_size = MAX_LINEAR_MEMORY_SIZE;
@@ -340,15 +341,16 @@ wasm_runtime_validate_app_addr(WASMModuleInstanceCommon *module_inst_comm,
         max_linear_memory_size = MAX_LINEAR_MEM64_MEMORY_SIZE;
 #endif
     /* boundary overflow check */
-    if (size > max_linear_memory_size
-        || app_offset > max_linear_memory_size - size) {
+    if (size > memory_inst->heap_top
+        || app_offset > memory_inst->heap_top - size) {
         goto fail;
     }
 
     SHARED_MEMORY_LOCK(memory_inst);
 
-    if (app_offset + size <= memory_inst->memory_data_size) {
+    if (app_offset + size <= memory_inst->heap_top) {
         SHARED_MEMORY_UNLOCK(memory_inst);
+	printf("finishing... %lu\n", (unsigned long)app_offset);
         return true;
     }
 
@@ -405,6 +407,7 @@ bool
 wasm_runtime_validate_native_addr(WASMModuleInstanceCommon *module_inst_comm,
                                   void *native_ptr, uint64 size)
 {
+	printf("wasm_runtime_validate_native_addr, native_ptr %lu\n", (unsigned long)native_ptr);
     WASMModuleInstance *module_inst = (WASMModuleInstance *)module_inst_comm;
     WASMMemoryInstance *memory_inst;
     uint8 *addr = (uint8 *)native_ptr;
@@ -416,6 +419,8 @@ wasm_runtime_validate_native_addr(WASMModuleInstanceCommon *module_inst_comm,
     if (!is_bounds_checks_enabled(module_inst_comm)) {
         return true;
     }
+    /* CHA: */
+    return true;
 
     memory_inst = wasm_get_default_memory(module_inst);
     if (!memory_inst) {
@@ -598,7 +603,6 @@ wasm_check_app_addr_and_convert(WASMModuleInstance *module_inst, bool is_str,
                                 uint64 app_buf_addr, uint64 app_buf_size,
                                 void **p_native_addr)
 {
-	printf("wasm_check_app_addr_and_convert\n");
     WASMMemoryInstance *memory_inst = wasm_get_default_memory(module_inst);
     uint8 *native_addr;
     bool bounds_checks;

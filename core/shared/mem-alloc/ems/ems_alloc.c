@@ -367,7 +367,7 @@ alloc_hmu(gc_heap_t *heap, gc_size_t size)
         size = GC_SMALLEST_SIZE;
 
     /* CHA: if mpu region set, make size to size + RED_SIZE */
-    if (get_region(heap->base_addr) != -1) size += RED_SIZE;
+    if (get_linear_memory() != 0) size += RED_SIZE;
 
     /* check normal list at first*/
     /* CHA: added condition to find in normal list: 
@@ -610,7 +610,7 @@ gc_alloc_vo_internal(void *vheap, gc_size_t size, const char *file, int line)
 #endif
 
     ret = hmu_to_obj(hmu);
-    if (get_region(ret) != -1) {
+    if (get_linear_memory() != 0) {
     	set_shadow(ret, size, 0);
     	set_shadow(ret + size, tot_size - size - 4, 1);
     }
@@ -899,7 +899,7 @@ gc_free_vo_internal(void *vheap, gc_object_t obj, const char *file, int line)
             heap->total_size_freed += size;
 #endif
 	    /* CHA: set shadow memory of freed heap object */
-	    if (get_region(hmu) != -1) set_shadow(hmu, size, 1);
+	    if (get_linear_memory() != 0) set_shadow(hmu, size, 1);
 	    /* CHA: increase total normal list size by freed size */
 	    heap->total_normal_list_size += size;
 								    
