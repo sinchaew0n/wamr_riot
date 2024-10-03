@@ -268,7 +268,6 @@ execute_main(WASMModuleInstanceCommon *module_inst, int32 argc, char *argv[])
         *(int *)argv = (int)argv1[0];
 
     if (argv_buf_offset)
-	    printf("execute_main: argv_buf_offset %lu\n", (unsigned long)argv_buf_offset);
         wasm_runtime_module_free(module_inst, argv_buf_offset);
 
     return ret;

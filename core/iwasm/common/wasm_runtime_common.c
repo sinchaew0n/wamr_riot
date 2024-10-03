@@ -3183,7 +3183,6 @@ void
 wasm_runtime_module_free_internal(WASMModuleInstanceCommon *module_inst,
                                   WASMExecEnv *exec_env, uint64 ptr)
 {
-	printf("wasm_runtime_module_free_internal: ptr %u\n", ptr);
 #if WASM_ENABLE_INTERP != 0
     if (module_inst->module_type == Wasm_Module_Bytecode) {
         wasm_module_free_internal((WASMModuleInstance *)module_inst, exec_env,
@@ -3237,7 +3236,6 @@ wasm_runtime_module_realloc(WASMModuleInstanceCommon *module_inst, uint64 ptr,
 void
 wasm_runtime_module_free(WASMModuleInstanceCommon *module_inst, uint64 ptr)
 {
-	printf("wasm_runtime_module_free: ptr %lu\n", (unsigned long)ptr);
 #if WASM_ENABLE_INTERP != 0
     if (module_inst->module_type == Wasm_Module_Bytecode) {
         wasm_module_free((WASMModuleInstance *)module_inst, ptr);

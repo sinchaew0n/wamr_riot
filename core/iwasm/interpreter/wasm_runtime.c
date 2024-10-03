@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2019 Intel Corporation.  All rights reserved.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
@@ -163,7 +163,6 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
                    uint32 max_page_count, uint32 heap_size, uint32 flags,
                    char *error_buf, uint32 error_buf_size)
 {
-	//printf("memory_instantiate\n");
     WASMModule *module = module_inst->module;
     uint32 inc_page_count, global_idx, default_max_page;
     uint32 bytes_of_last_page, bytes_to_page_end;
@@ -240,7 +239,6 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
                         < (uint64)num_bytes_per_page * init_page_count) {
             /* Insert app heap before __heap_base */
             aux_heap_base = module->aux_heap_base;
-	    //printf("aux_heap_base: %u\n", aux_heap_base);
             bytes_of_last_page = aux_heap_base % num_bytes_per_page;
             if (bytes_of_last_page == 0)
                 bytes_of_last_page = num_bytes_per_page;
@@ -327,7 +325,6 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
         return NULL;
     }
 
-    printf("memory->memory_data %lu\n", memory->memory_data);
     memory->module_type = Wasm_Module_Bytecode;
     memory->num_bytes_per_page = num_bytes_per_page;
     memory->cur_page_count = init_page_count;
@@ -337,11 +334,9 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
     /* CHA: setting heap_offset to heap_offset + initial data segment offset */
     memory->data_base = module_inst->module->data_segments[0]->base_offset.u.i32;
     memory->data_top = heap_offset;
-    printf("data_base %u, data_top %u\n", memory->data_base, memory->data_top);
     heap_offset += (uint32)((uintptr_t)(memory->data_base + 7) & ~7);
     memory->heap_base = heap_offset;
     memory->heap_top = memory->heap_base + heap_size;
-    printf("heap_offset %u, heap_top %u, heap_size %u\n", memory->heap_base, memory->heap_top, heap_size);
     /* CHA: finished */
     memory->heap_data = memory->memory_data + heap_offset;
     memory->heap_data_end = memory->heap_data + heap_size;
@@ -3582,7 +3577,6 @@ wasm_module_malloc_internal(WASMModuleInstance *module_inst,
 
     if (get_linear_memory() == 0) return (uint64)(addr - memory->memory_data);
     /* CHA: increse addr by segment redzone size */
-    else printf("wasm_module_malloc_internal: %u\n", addr - memory->memory_data + seg_red * 2);
     return (uint64)(addr - memory->memory_data + seg_red * 2);
 }
 
@@ -3644,7 +3638,6 @@ wasm_module_free_internal(WASMModuleInstance *module_inst,
 
     if (ptr) {
         uint8 *addr = memory->memory_data + (uint32)ptr;
-	printf("wasm_module_free_internal: addr %lu\n", (unsigned long)addr);
         uint8 *memory_data_end;
 
         /* memory->memory_data_end may be changed in memory grow */
@@ -3653,11 +3646,9 @@ wasm_module_free_internal(WASMModuleInstance *module_inst,
         SHARED_MEMORY_UNLOCK(memory);
 
         if (memory->heap_handle && memory->heap_data <= addr
-            && addr < memory->heap_data_end) {
+            && addr < memory->heap_data + memory->heap_top) {
 		/* CHA: here */
-	    if (get_linear_memory() == 0)
             mem_allocator_free(memory->heap_handle, addr);
-	    else mem_allocator_free(memory->heap_handle, addr - seg_red * 2);
         }
         else if (module_inst->e->malloc_function
                  && module_inst->e->free_function && memory->memory_data <= addr
@@ -3686,7 +3677,6 @@ wasm_module_realloc(WASMModuleInstance *module_inst, uint64 ptr, uint64 size,
 void
 wasm_module_free(WASMModuleInstance *module_inst, uint64 ptr)
 {
-	printf("wasm_module_free: ptr %lu\n", (unsigned long)ptr);
     wasm_module_free_internal(module_inst, NULL, ptr);
 }
 

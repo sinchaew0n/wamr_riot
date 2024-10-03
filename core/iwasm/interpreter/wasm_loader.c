@@ -3486,7 +3486,6 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 		    }
 		    if (!strcmp(field_name, "free")) {
                             module->free_function = i;
-			    printf("free function found, %d\n", i);
                             LOG_VERBOSE("Found free function, name: %s, index: %u", field_name, i);
                     }
                     break;

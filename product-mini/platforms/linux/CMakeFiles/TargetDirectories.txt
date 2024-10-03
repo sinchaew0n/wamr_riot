@@ -1,0 +1,9 @@
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/vmlib.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/iwasm.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/libiwasm.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/edit_cache.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/rebuild_cache.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/list_install_components.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/install.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/install/local.dir
+/home/cha/RIOT/build/pkg/wamr/product-mini/platforms/linux/CMakeFiles/install/strip.dir
