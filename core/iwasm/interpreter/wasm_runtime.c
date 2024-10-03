@@ -313,7 +313,10 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
     bh_assert(memory != NULL);
 
     /* CHA: to increase linear memory size by data segment offset */
-    memory_data_size = module_inst->module->data_segments[0]->base_offset.u.i32;
+    if (module_inst && module_inst->module && module_inst->module->data_segments) {
+	    memory_data_size = module_inst->module->data_segments[0]->base_offset.u.i32;
+    }
+    else memory_data_size = 1024;
 
     if (wasm_allocate_linear_memory(&memory->memory_data, is_shared_memory,
                                     memory->is_memory64, num_bytes_per_page,
@@ -332,8 +335,15 @@ memory_instantiate(WASMModuleInstance *module_inst, WASMModuleInstance *parent,
     memory->memory_data_size = memory_data_size;
 
     /* CHA: setting heap_offset to heap_offset + initial data segment offset */
-    memory->data_base = module_inst->module->data_segments[0]->base_offset.u.i32;
-    memory->data_top = heap_offset;
+    if (module_inst && module_inst->module && module_inst->module->data_segments) {
+	    memory->data_base = module_inst->module->data_segments[0]->base_offset.u.i32;
+	    memory->data_top = heap_offset;
+    }
+    else {
+	    memory->data_base = 1024;
+	    if (module_inst->module->aux_data_end) memory->data_top = module_inst->module->aux_data_end;
+	    else memory->data_top = 2048;
+    }
     heap_offset += (uint32)((uintptr_t)(memory->data_base + 7) & ~7);
     memory->heap_base = heap_offset;
     memory->heap_top = memory->heap_base + heap_size;

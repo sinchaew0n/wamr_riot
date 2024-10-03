@@ -262,6 +262,8 @@ execute_main(WASMModuleInstanceCommon *module_inst, int32 argc, char *argv[])
         }
     }
 
+    /* CHA: to prevent error*/
+    exec_env->module_inst = module_inst;
     ret = wasm_runtime_call_wasm(exec_env, func, argc1, argv1);
     if (ret && func_type->result_count > 0 && argc > 0 && argv)
         /* copy the return value */

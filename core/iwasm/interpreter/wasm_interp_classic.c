@@ -64,25 +64,29 @@ typedef float64 CellType_F64;
 		if (offset < memory->stack_base) { \
 			if (offset < memory->data_top) { \
 				if (offset < memory->data_base) { \
-					goto out_of_bounds; /* < global_base */ \
+					printf("< global_base\n");\
+					/*goto out_of_bounds_red;*/ /* < global_base */ \
 				} else { \
 					maddr = memory->memory_data + offset; /* global */ \
 				} \
 			} else { \
-				goto out_of_bounds; /* global_top < < stack_base */ \
+				printf("global_top < < stack_base\n");\
+				/*goto out_of_bounds_red;*/ /* global_top < < stack_base */ \
 			} \
 		} else { \
 			if (offset < memory->heap_base) { \
 				if (offset < memory->stack_top) { \
 					addr -= seg_red; maddr = memory->memory_data + offset - seg_red; /* stack */ \
 				} else { \
-					goto out_of_bounds; /* stack_top < < heap_base */ \
+					printf("stack_top < < heap_base\n");\
+					/*goto out_of_bounds_red;*/ /* stack_top < < heap_base */ \
 				} \
 			} else { \
 				if (offset <= memory->heap_top) { \
 					addr -= seg_red * 2; maddr = memory->memory_data + offset - seg_red * 2; /* heap */ \
 				} else { \
-					goto out_of_bounds; /* > heal */ \
+					printf("> heap\n");\
+					/*goto out_of_bounds_red;*/ /* > heap */ \
 				} \
 			} \
 		} \
@@ -2303,7 +2307,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 cur_func = module->e->functions + fidx;
 		/* CHA: iscall = true */
 		iscall = true;
-		//printf("CALL: %d\n", fidx);
 		if (fidx == module->module->malloc_function) {
 			//printf("malloc called!\n");
 			/* CHA: printf */
@@ -4334,7 +4337,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 			//printf("SET_GLOBAL: ");
 			if (*(int32 *)global_addr < *(uint32 *)(frame_sp - 1)) {
 				//printf("(+), ");
-				*(int32 *)(frame_sp - 1) += 128;
+				*(int32 *)(frame_sp - 1) += RED_SIZE;
 			}
 			else// printf("(-), ");
 			//printf("before %u, after %u\n", *(int32 *)global_addr, *(uint32 *)(frame_sp - 1));
@@ -6899,6 +6902,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     || WASM_ENABLE_BULK_MEMORY != 0
     out_of_bounds:
         wasm_set_exception(module, "out of bounds memory access");
+    out_of_bounds_red:
+        wasm_set_exception(module, "out of bounds memory access with redzone");
 #endif
 
     got_exception:
