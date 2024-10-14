@@ -205,9 +205,9 @@ void set_shadow(uint32 addr, int size, int value) {
 
     uint8 *shaddr;
     for (uint32 cur = addr; cur < addr + size; cur += 4) {
-        shaddr = (uint8 *)(data_segment_start - (cur / 32) - 1);
-        int idx = (cur / 4) % 8;
-        *shaddr = (*shaddr & ~(1 << idx)) | (value << idx);
+        shaddr = (uint8 *)(data_segment_start - (cur / 16) - 1);
+        int idx = ((cur / 2) % 4) * 2;
+        *shaddr = (*shaddr & ~(3 << idx)) | (value << idx);
     }
    // printf("set_shadow finished...\n");
 }
@@ -222,10 +222,10 @@ void check_shadow(uint32 addr) {
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
     addr -= stack_segment_addr;
 
-    uint8 *shaddr = (uint8 *)(data_segment_start - (addr / 32) - 1);
-    int idx = (addr / 4) % 8;
+    uint8 *shaddr = (uint8 *)(data_segment_start - (addr / 16) - 1);
+    int idx = ((addr / 2) % 4) * 2;
 
-    if ((*shaddr) & (1 << idx)) printf("error: redzone touched!, %p\n", (unsigned long) addr);
+    if ((*shaddr) & (11 << idx)) printf("error: redzone touched!, %p\n", (unsigned long) addr);
 }
 /* CHA: finished */
 
