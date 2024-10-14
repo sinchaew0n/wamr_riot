@@ -1048,6 +1048,7 @@ wasm_allocate_linear_memory(uint8 **data, bool is_shared_memory,
 
     bh_assert(*memory_data_size <= GET_MAX_LINEAR_MEMORY_SIZE(is_memory64));
     *memory_data_size = align_as_and_cast(*memory_data_size, page_size);
+    map_size = *memory_data_size;
 
     if (map_size > 0) {
 #if WASM_MEM_ALLOC_WITH_USAGE != 0
