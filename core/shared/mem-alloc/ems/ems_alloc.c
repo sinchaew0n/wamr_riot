@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#define RED_SIZE 64
+#define RED_SIZE 128
 
 #include "ems_gc_internal.h"
 

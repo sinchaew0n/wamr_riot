@@ -10,7 +10,7 @@
 
 #include "ems/ems_gc.h"
 
-#define RED_SIZE 64 
+#define RED_SIZE 128
 extern uint32 seg_red;
 
 mem_allocator_t

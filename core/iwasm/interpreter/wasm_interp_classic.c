@@ -186,7 +186,7 @@ typedef float64 CellType_F64;
 #endif
 
 /* CHA: define shadow memory size */
-#define RED_SIZE 64
+#define RED_SIZE 128
 
 uint8 *linear_memory = 0;
 uint8 *data_segment_start = 0;
