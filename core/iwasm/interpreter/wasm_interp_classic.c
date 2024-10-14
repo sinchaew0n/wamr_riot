@@ -29,8 +29,6 @@
 #endif
 
 /* CHA: header for MPU */
-#include "mpu_prog.h"
-#include "mpu_defs.h"
 #include "ztimer.h"
 
 /* CHA: global var seg_red */
@@ -7547,10 +7545,6 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
     data_segment_start = linear_memory + memory->data_base;
     /* CHA: finished */
 
-    /* CHA: setting shadow memories for global and stack memory */
-    set_shadow(memory->data_base, 
-		    memory->heap_base - memory->data_base, 0);
-    set_shadow(memory->heap_base, memory->heap_top - memory->heap_base, 1);
     /* CHA: setting initial stack pointer to stack pointer + inter-segmenet redzone */
     exec_env->aux_stack_boundary += memory->data_top + seg_red;
     exec_env->aux_stack_bottom += memory->data_top + seg_red;
@@ -7558,11 +7552,16 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
     wasm_get_default_memory(module_inst)->stack_base =
             memory->data_top + seg_red;
     *(uint32 *)get_global_addr(module_inst->global_data, module_inst->e->globals)
-            += memory->data_top + seg_red;
-    wasm_get_default_memory(module_inst)->stack_top =
+	    += memory->data_top + seg_red;
+    memory->stack_top =
             *(uint32 *)get_global_addr(module_inst->global_data, module_inst->e->globals);
-    memory->heap_base += seg_red * 2;
-    memory->heap_top += seg_red * 2;
+    memory->heap_base += seg_red * 2 + memory->stack_top - memory->stack_base;
+    memory->heap_top += seg_red * 2 + memory->stack_top - memory->stack_base;
+    /* CHA: setting shadow memories for global and stack memory */
+    set_shadow(memory->data_base,
+                    memory->stack_top - seg_red - memory->data_base, 0);
+    set_shadow(memory->heap_base - seg_red * 2, memory->heap_top - memory->heap_base, 1);
+
     //printf("global top %p, stack base %p, stack top %p\n", memory->data_top, memory->stack_base, memory->stack_top);
     /* CHA: finished */
 

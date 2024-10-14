@@ -59,7 +59,6 @@ mem_allocator_free(mem_allocator_t allocator, void *ptr)
 {
 	if (get_linear_memory()) ptr -= (uintptr_t)seg_red * 2;
     if (ptr) {
-	check_shadow(ptr);
         gc_free_vo((gc_handle_t)allocator, ptr);
     }
 }
