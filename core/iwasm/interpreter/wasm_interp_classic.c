@@ -216,6 +216,7 @@ int set = 0, check = 0;
 
 /* CHA: function for setting shadow memory */
 void set_shadow(uint32 addr, int size, int value) {
+	
 	set++;
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
 
@@ -223,13 +224,14 @@ void set_shadow(uint32 addr, int size, int value) {
         uint8 *shaddr = (uint8 *)(data_segment_start - (cur / 32) - 1);
         int idx = (cur / 4) % 8;
         *shaddr = (*shaddr & ~(1 << idx)) | (value << idx);
-    }
+    } 
    // printf("set_shadow finished...\n");
 }
 /* CHA: finished */
 
 /* CHA: function for checking shadow memory */
 void check_shadow(uint32 addr) {
+
 	check++;
 	//printf("check_shadow : addr %p\n");
     if (addr > 0x80000000) return;
@@ -7556,7 +7558,7 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
     memory->stack_top =
             *(uint32 *)get_global_addr(module_inst->global_data, module_inst->e->globals);
     memory->heap_base += seg_red * 2 + memory->stack_top - memory->stack_base;
-    memory->heap_top += seg_red * 2 + memory->stack_top - memory->stack_base;
+    memory->heap_top += seg_red * 2 + memory->stack_top - memory->stack_base; 
     /* CHA: setting shadow memories for global and stack memory */
     set_shadow(memory->data_base,
                     memory->stack_top - seg_red - memory->data_base, 0);

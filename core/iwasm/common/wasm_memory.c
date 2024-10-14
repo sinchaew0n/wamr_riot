@@ -1005,10 +1005,11 @@ wasm_deallocate_linear_memory(WASMMemoryInstance *memory_inst)
               memory_inst->memory_data);
 #else
     /* CHA: modify memory start addr and memory size for safe unmapping */
-    wasm_munmap_linear_memory(memory_inst->memory_data - memory_inst->memory_data_size / 8,
-                              memory_inst->memory_data_size / 32 * 33, map_size);
+    wasm_munmap_linear_memory(memory_inst->memory_data,
+                              memory_inst->memory_data_size, map_size);
 #endif
 
+    printf("memory_inst->memory_data_size: %p\n", memory_inst->memory_data);
     memory_inst->memory_data = NULL;
 }
 
@@ -1072,6 +1073,8 @@ wasm_allocate_linear_memory(uint8 **data, bool is_shared_memory,
      * see aot_check_memory_overflow.
      */
     bh_assert(((uintptr_t)*data & 0x7) == 0);
+
+    printf("memory_data: %p\n", *data);
 
     return BHT_OK;
 }
