@@ -1009,7 +1009,6 @@ wasm_deallocate_linear_memory(WASMMemoryInstance *memory_inst)
                               memory_inst->memory_data_size, map_size);
 #endif
 
-    printf("memory_inst->memory_data_size: %p\n", memory_inst->memory_data);
     memory_inst->memory_data = NULL;
 }
 
@@ -1074,7 +1073,6 @@ wasm_allocate_linear_memory(uint8 **data, bool is_shared_memory,
      */
     bh_assert(((uintptr_t)*data & 0x7) == 0);
 
-    printf("memory_data: %p\n", *data);
 
     return BHT_OK;
 }

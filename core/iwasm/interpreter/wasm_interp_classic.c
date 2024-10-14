@@ -28,9 +28,6 @@
 #include "../fast-jit/jit_compiler.h"
 #endif
 
-/* CHA: header for MPU */
-#include "ztimer.h"
-
 /* CHA: global var seg_red */
 uint32 seg_red = 0x400000;
 
@@ -188,27 +185,12 @@ typedef float64 CellType_F64;
 #define CHECK_WRITE_WATCHPOINT(addr, offset) (void)0
 #endif
 
-/* CHA: function to get mpu region number of given address */
-int get_region(uint32 addr) {
-	uint32_t result;
-                __asm volatile (
-                                "mov r1, %1\n"
-                                "TT %0, r1\n"
-                                : "=r" (result)
-                                : "r" (addr)
-                                : "r1"
-        );
-        uint8_t region_num = result & 0xFF;
-        uint8_t mpu_valid = (result >> 16) & 0x1;
-	if (mpu_valid != 0) return region_num;
-	else return -1;
-}
-
 /* CHA: define shadow memory size */
 #define RED_SIZE 32
 
 uint8 *linear_memory = 0;
 uint8 *data_segment_start = 0;
+uint32 stack_segment_addr = 0;
 uint8 *get_linear_memory(void) {
 	return linear_memory;
 }
@@ -217,14 +199,16 @@ int set = 0, check = 0;
 /* CHA: function for setting shadow memory */
 void set_shadow(uint32 addr, int size, int value) {
 	
-	set++;
+	//set++;
+    addr -= stack_segment_addr;
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
 
+    uint8 *shaddr;
     for (uint32 cur = addr; cur < addr + size; cur += 4) {
-        uint8 *shaddr = (uint8 *)(data_segment_start - (cur / 32) - 1);
+        shaddr = (uint8 *)(data_segment_start - (cur / 32) - 1);
         int idx = (cur / 4) % 8;
         *shaddr = (*shaddr & ~(1 << idx)) | (value << idx);
-    } 
+    }
    // printf("set_shadow finished...\n");
 }
 /* CHA: finished */
@@ -232,10 +216,11 @@ void set_shadow(uint32 addr, int size, int value) {
 /* CHA: function for checking shadow memory */
 void check_shadow(uint32 addr) {
 
-	check++;
+	//check++;
 	//printf("check_shadow : addr %p\n");
     if (addr > 0x80000000) return;
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
+    addr -= stack_segment_addr;
 
     uint8 *shaddr = (uint8 *)(data_segment_start - (addr / 32) - 1);
     int idx = (addr / 4) % 8;
@@ -2321,10 +2306,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 		/* CHA: iscall = true */
 		iscall = true;
 		if (fidx == module->module->malloc_function) {
-			//printf("malloc called!\n");
-			/* CHA: printf */
-			uint32 *sp_addr = get_global_addr(global_data, globals);
-			/* CHA: finished */
 		}
                 goto call_func_from_interp;
             }
@@ -2436,9 +2417,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
 		/* CHA: iscall = true */
                 iscall = true;
-		/* CHA: printf */
-                uint32 *sp_addr = get_global_addr(global_data, globals);
-                //printf("RETURN CALL_INDIRECT: stack pointer %u\n", *sp_addr);
                 /* CHA: finished */
 
 #if WASM_ENABLE_TAIL_CALL != 0
@@ -7545,14 +7523,14 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
     /* CHA: set linear_memory */
     linear_memory = memory->memory_data;
     data_segment_start = linear_memory + memory->data_base;
+    stack_segment_addr = memory->data_top;
     /* CHA: finished */
 
     /* CHA: setting initial stack pointer to stack pointer + inter-segmenet redzone */
     exec_env->aux_stack_boundary += memory->data_top + seg_red;
     exec_env->aux_stack_bottom += memory->data_top + seg_red;
 
-    wasm_get_default_memory(module_inst)->stack_base =
-            memory->data_top + seg_red;
+    memory->stack_base = memory->data_top + seg_red;
     *(uint32 *)get_global_addr(module_inst->global_data, module_inst->e->globals)
 	    += memory->data_top + seg_red;
     memory->stack_top =
@@ -7560,19 +7538,16 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
     memory->heap_base += seg_red * 2 + memory->stack_top - memory->stack_base;
     memory->heap_top += seg_red * 2 + memory->stack_top - memory->stack_base; 
     /* CHA: setting shadow memories for global and stack memory */
-    set_shadow(memory->data_base,
-                    memory->stack_top - seg_red - memory->data_base, 0);
+    set_shadow(memory->stack_base - seg_red,
+                    memory->stack_top - memory->stack_base, 0);
     set_shadow(memory->heap_base - seg_red * 2, memory->heap_top - memory->heap_base, 1);
 
     //printf("global top %p, stack base %p, stack top %p\n", memory->data_top, memory->stack_base, memory->stack_top);
     /* CHA: finished */
 
-    	    uint32_t start = ztimer_now(ZTIMER_MSEC);
             wasm_interp_call_func_bytecode(module_inst, exec_env, function,
                                            frame);
-	    uint32_t end = ztimer_now(ZTIMER_MSEC);
-	    uint32_t duration = end - start;
-	    printf("check %d, set %d\n", check, set);
+	    //printf("check %d, set %d\n", check, set);
         }
 #if WASM_ENABLE_FAST_JIT != 0
         else if (running_mode == Mode_Fast_JIT) {
