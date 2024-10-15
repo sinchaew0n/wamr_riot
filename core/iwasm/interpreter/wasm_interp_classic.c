@@ -55,7 +55,7 @@ typedef float64 CellType_F64;
      || WASM_CPU_SUPPORTS_UNALIGNED_ADDR_ACCESS == 0)
 
 /* CHA: CHECK_MEMORY_BOUNDS for bounds checking among segments */
-#define CHECK_MEMORY_BOUNDS(offset, addr) \
+#define CHECK_MEMORY_BOUNDS(offset, addr, bytes) \
 	do { \
 		if (offset > 0x80000000) ; \
 		else if (offset < memory->stack_base) { \
@@ -74,7 +74,7 @@ typedef float64 CellType_F64;
 			if (offset < memory->heap_base) { \
 				if (offset < memory->stack_top) { \
 					addr -= seg_red; maddr = memory->memory_data + offset - seg_red; /* stack */ \
-					check_shadow(offset - seg_red); \
+					check_shadow(offset - seg_red, bytes); \
 				} else { \
 					printf("stack_top < < heap_base\n");\
 					/*goto out_of_bounds_red;*/ /* stack_top < < heap_base */ \
@@ -82,7 +82,7 @@ typedef float64 CellType_F64;
 			} else { \
 				if (offset <= memory->heap_top) { \
 					addr -= seg_red * 2; maddr = memory->memory_data + offset - seg_red * 2; /* heap */ \
-					check_shadow(offset - seg_red * 2); \
+					check_shadow(offset - seg_red * 2, bytes); \
 				} else { \
 					printf("> heap\n");\
 					/*goto out_of_bounds_red;*/ /* > heap */ \
@@ -95,14 +95,14 @@ typedef float64 CellType_F64;
     do {                                                                       \
         uint64 offset1 = (uint64)offset + (uint64)addr;                        \
         if (!disable_bounds_checks) \
-		CHECK_MEMORY_BOUNDS(offset1, addr); \
+		CHECK_MEMORY_BOUNDS(offset1, addr, bytes); \
     } while (0)
 
 #define CHECK_BULK_MEMORY_OVERFLOW(start, bytes, maddr)                        \
     do {                                                                       \
         uint64 offset1 = (uint32)(start);                                      \
         if (!disable_bounds_checks) \
-		CHECK_MEMORY_BOUNDS(offset1, start); \
+		CHECK_MEMORY_BOUNDS(offset1, start, bytes); \
             /* App heap space is not valid space for                           \
              bulk memory operation */                                          \
     } while (0)
@@ -214,18 +214,20 @@ void set_shadow(uint32 addr, int size, int value) {
 /* CHA: finished */
 
 /* CHA: function for checking shadow memory */
-void check_shadow(uint32 addr) {
+void check_shadow(uint32 addr, int size) {
 
 	//check++;
 	//printf("check_shadow : addr %p\n");
     if (addr > 0x80000000) return;
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
     addr -= stack_segment_addr;
-
-    uint8 *shaddr = (uint8 *)(data_segment_start - (addr / 32) - 1);
-    int idx = (addr / 4) % 8;
-
-    if ((*shaddr) & (1 << idx)) printf("error: redzone touched!, %p\n", (unsigned long) addr);
+    uint8 *shaddr;
+    for (uint32 cur = addr; cur < addr + size; cur += 4) {
+	    shaddr = (uint8 *)(data_segment_start - (cur / 32) - 1);
+	    int idx = (cur / 4) % 8;
+	    
+	    if ((*shaddr) & (1 << idx)) printf("error: redzone touched!, %p\n", (unsigned long) addr);
+    }
 }
 /* CHA: finished */
 
@@ -1542,6 +1544,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                WASMFunctionInstance *cur_func,
                                WASMInterpFrame *prev_frame)
 {
+
     WASMMemoryInstance *memory = wasm_get_default_memory(module);
 #if !defined(OS_ENABLE_HW_BOUND_CHECK)              \
     || WASM_CPU_SUPPORTS_UNALIGNED_ADDR_ACCESS == 0 \
