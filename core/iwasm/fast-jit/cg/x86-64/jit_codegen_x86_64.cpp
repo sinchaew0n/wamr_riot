@@ -8395,7 +8395,7 @@ jit_codegen_gen_native(JitCompContext *cc)
     if (prev_end_addr != 0
 		    && (((uintptr_t)(prev_end_addr) & ~4095) == ((uintptr_t)(prev_end_addr + code_size) & ~4095))) {
 	    stream = prev_end_addr;
-	    //pkey_set(pkey, 0);
+	    pkey_set(pkey, 0);
 	    //printf("pkey: %d\n", pkey);
     }
     else {
@@ -8416,7 +8416,7 @@ allocate:
 
     /* CHA: generate pkey, set pkey and permission with pkey_mprotect */
     bh_memcpy_s(stream, code_size, code_buf, code_size);
-    if (pkey != 0) pkey_set(pkey, PKEY_DISABLE_WRITE);
+    //if (pkey != 0) pkey_set(pkey, PKEY_DISABLE_WRITE);
     
     pthread_mutex_unlock(&lock);
 
