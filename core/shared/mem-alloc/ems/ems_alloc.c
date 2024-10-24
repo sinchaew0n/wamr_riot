@@ -339,6 +339,10 @@ gci_add_fc(gc_heap_t *heap, hmu_t *hmu, gc_size_t size)
  * @return hmu allocated if success, which will be aligned to 8 bytes,
  *         NULL otherwise
  */
+
+/* CHA: check if start address should be 4kB aligned */
+extern bool isFromJit;
+
 static hmu_t *
 alloc_hmu(gc_heap_t *heap, gc_size_t size)
 {
@@ -436,7 +440,9 @@ alloc_hmu(gc_heap_t *heap, gc_size_t size)
         }
 #endif
 
-        if (tp->size < size) {
+	/* CHA: modified */
+        if (tp->size < size || (isFromJit && !((uintptr_t)(hmu_to_obj(tp)) & 4095 == 4095 - 4  
+			|| ((uintptr_t)(hmu_to_obj(tp) + tp->size) & ~4095) - ((uintptr_t)(hmu_to_obj(tp) + 4095) & ~4095) > 0))) {
             tp = tp->right;
             continue;
         }
@@ -455,6 +461,8 @@ alloc_hmu(gc_heap_t *heap, gc_size_t size)
         if (!remove_tree_node(heap, last_tp))
             return NULL;
 
+	if (!isFromJit) {
+	/* CHA: if allocation is not from jit compiler, use default allocator code */
         if (last_tp->size >= size + GC_SMALLEST_SIZE) {
             rest = (hmu_t *)((char *)last_tp + size);
             if (!gci_add_fc(heap, rest, last_tp->size - size))
@@ -475,6 +483,38 @@ alloc_hmu(gc_heap_t *heap, gc_size_t size)
         hmu_set_size((hmu_t *)last_tp, size);
         tp_ret = (uintptr_t)last_tp;
         return (hmu_t *)tp_ret;
+	}
+	else {
+	/* CHA: if allocation is from jit compiler, the start address would be 4kB aligned */
+		{
+			/* for left rest memory */
+			rest = (hmu_t *)last_tp;
+			uint32 last_tp_size = last_tp->size;
+			uint32 rest_size = (unsigned long)(((uintptr_t)(hmu_to_obj(last_tp) + 4095) & ~4095) - 4 - (uintptr_t)rest);
+			if (!gci_add_fc(heap, rest, rest_size))
+				return NULL;
+			hmu_mark_pinuse(rest);
+			last_tp_size = last_tp_size - rest_size;
+			last_tp = ((uintptr_t)(hmu_to_obj(last_tp) + 4095) & ~4095) - 4;
+			last_tp->size = last_tp_size;
+			hmu_set_size((hmu_t *)last_tp, last_tp_size);
+		}
+		if (last_tp->size - (((uintptr_t)(last_tp + 4095) & ~4095) - (uintptr_t)last_tp + size)
+				>= GC_SMALLEST_SIZE) {
+			/* for right rest memory */
+			rest = (uintptr_t)last_tp + size;
+			if (!gci_add_fc(heap, rest, (char *)(last_tp) + last_tp->size - (char *)rest))
+				return NULL;
+			hmu_mark_pinuse(rest);
+			last_tp->size = (char *)rest - (char *)last_tp;
+			hmu_set_size((hmu_t *)last_tp, last_tp->size);
+		}
+
+		size = last_tp->size;
+		heap->total_free_size -= size;
+		tp_ret = (uintptr_t)last_tp;
+		return (hmu_t *)tp_ret;
+	}
     }
 
     return NULL;

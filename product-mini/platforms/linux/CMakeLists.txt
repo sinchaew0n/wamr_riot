@@ -18,6 +18,10 @@ set (CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 set (CMAKE_C_STANDARD 99)
 set (CMAKE_CXX_STANDARD 17)
 
+# YUN: link OpenSSL
+find_package(OpenSSL REQUIRED)
+# YUN: finish
+
 # Set WAMR_BUILD_TARGET, currently values supported:
 # "X86_64", "AMD_64", "X86_32", "AARCH64[sub]", "ARM[sub]", "THUMB[sub]",
 # "MIPS", "XTENSA", "RISCV64[sub]", "RISCV32[sub]"
@@ -180,6 +184,10 @@ target_link_libraries(iwasm
   -ldl
   -lpthread
 )
+
+# YUN: OpenSSL을 iwasm 타겟에 링크한다.
+target_link_libraries(iwasm OpenSSL::SSL OpenSSL::Crypto)
+# YUN: finish
 
 install (TARGETS iwasm DESTINATION bin)
 

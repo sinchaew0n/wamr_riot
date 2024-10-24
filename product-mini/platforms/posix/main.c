@@ -22,6 +22,9 @@
 #include <dlfcn.h>
 #endif
 
+/* CHA: for mpk feature */
+#include <sys/mman.h>
+
 static int app_argc;
 static char **app_argv;
 
@@ -574,6 +577,10 @@ main(int argc, char *argv[])
 #endif
 #if WASM_ENABLE_FAST_JIT != 0
     uint32 jit_code_cache_size = FAST_JIT_DEFAULT_CODE_CACHE_SIZE;
+    /* CHA: pkey_alloc for pkeys used */
+    for (int i = 1; i < 16; i++) {
+	    pkey_alloc(0, 0);
+    }
 #endif
 #if WASM_ENABLE_GC != 0
     uint32 gc_heap_size = GC_HEAP_SIZE_DEFAULT;

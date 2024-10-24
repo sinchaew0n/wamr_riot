@@ -92,6 +92,8 @@ b_memcpy_s(void *s1, unsigned int s1max, const void *s2, unsigned int n)
         memset(dest, 0, s1max);
         return -1;
     }
+
+
     memcpy(dest, src, n);
     return 0;
 }

@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+/* YUN: Check CPU Cycles */
+#include <iostream>
+#include <x86intrin.h>
+#include <cstdint>
+/* YUN: 쓰기 되는지 확인 */
+#include <signal.h>
+#include <cstring>
+
 #include "jit_codegen.h"
 #include "jit_codecache.h"
 #include "jit_compiler.h"
@@ -17,6 +25,11 @@
 
 #define CODEGEN_CHECK_ARGS 1
 #define CODEGEN_DUMP 0
+
+#include <pthread.h>
+#include <openssl/sha.h>
+bool isFromJit = false;
+pthread_mutex_t lock;
 
 using namespace asmjit;
 
@@ -7572,9 +7585,46 @@ fence(x86::Assembler &a)
 
 #endif
 
+/* CHA: function to generate pkey from address */
+/* YUN: add random offset */
+int pkey_gen(uintptr_t begin) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    unsigned char bytes[sizeof(uintptr_t) - 2];
+
+    FILE *infile = fopen("/proc/v8_offset", "r");
+    int offset = 0;
+    if (infile != NULL) {
+        fscanf(infile, "%d", &offset);
+        fclose(infile);
+    } else {
+        fprintf(stderr, "Error: Unable to open /proc/v8_offset\n");
+        exit(EXIT_FAILURE);
+    }
+
+    begin = begin >> 12;
+    begin = begin + offset;
+
+    for (int i = 0; i < (int)(sizeof(uintptr_t)) - 2; i++) {
+        bytes[i] = (begin >> (i * 8)) & 0xFF;
+    }
+
+    SHA256(bytes, sizeof(bytes), hash);
+
+    return (hash[0] % 0xF) + 1;
+}
+
+/* YUN: 시그널 핸들러: 쓰기 권한이 없는 메모리에 쓰기를 시도하면 발생하는 SIGSEGV를 처리 */
+void segv_handler(int sig, siginfo_t *si, void *unused) {
+	std::cerr << "Error: Caught SIGSEGV while trying to write to protected memory" << std::endl;
+	exit(1);
+}
+
+int pkey = 0;
+
 bool
 jit_codegen_gen_native(JitCompContext *cc)
 {
+	/* CHA: here */
     bool atomic;
     JitBasicBlock *block;
     JitInsn *insn;
@@ -7589,6 +7639,8 @@ jit_codegen_gen_native(JitCompContext *cc)
     bool return_value = false, is_last_insn;
     void **jitted_addr;
     char *code_buf, *stream;
+    /* CHA: variable for previous codespace end point */
+    static char* prev_end_addr = 0;
 
     JitErrorHandler err_handler;
     Environment env(Arch::kX64);
@@ -8330,16 +8382,47 @@ jit_codegen_gen_native(JitCompContext *cc)
         }
     }
 
+    /* CHA: allocate 4kB space for codespaces 
+     * if codespace not fits in previous 4kB space, use it
+     * if not, or if codespace size is bigger than 4kB, allocate another space */
     code_buf = (char *)code.sectionById(0)->buffer().data();
     code_size = code.sectionById(0)->buffer().size();
-    if (!(stream = (char *)jit_code_cache_alloc(code_size))) {
-        jit_set_last_error(cc, "allocate memory failed");
-        goto fail;
-    }
 
+    /* CHA: check if codespace fits in previous 4kB space */
+    pthread_mutex_lock(&lock);
+
+    isFromJit = true;
+    if (prev_end_addr != 0
+		    && (((uintptr_t)(prev_end_addr) & ~4095) == ((uintptr_t)(prev_end_addr + code_size) & ~4095))) {
+	    stream = prev_end_addr;
+	    //pkey_set(pkey, 0);
+	    //printf("pkey: %d\n", pkey);
+    }
+    else {
+	    if (pkey != 0) pkey_set(pkey, PKEY_DISABLE_WRITE);
+	    //if (pkey != 0) memcpy((void *)((uintptr_t)stream & ~4095), "test...", 8);
+allocate:
+	    stream = (char *)jit_code_cache_alloc((uintptr_t)(code_size + 4095) & ~4095);
+            if (!stream) {
+		    jit_set_last_error(cc, "allocate memory failed");
+            	    goto fail;
+	    }
+	    if (((uintptr_t)stream & 0xfff) != 0) goto allocate;
+	    pkey = pkey_gen((uintptr_t)stream & ~4095);
+	    pkey_mprotect((void *)((uintptr_t)stream & ~4095), (uintptr_t)(code_size + 4095) & ~4095, PROT_READ | PROT_EXEC | PROT_WRITE, pkey);
+	    printf("pkey_mprotect: addr %p, size %p, pkey %d\n", (void *)((uintptr_t)stream & ~4095), (uintptr_t)(code_size + 4095) & ~4095, pkey);
+    }
+    isFromJit = false;
+
+    /* CHA: generate pkey, set pkey and permission with pkey_mprotect */
     bh_memcpy_s(stream, code_size, code_buf, code_size);
+    if (pkey != 0) pkey_set(pkey, PKEY_DISABLE_WRITE);
+    
+    pthread_mutex_unlock(&lock);
+
     cc->jitted_addr_begin = stream;
     cc->jitted_addr_end = stream + code_size;
+    prev_end_addr = stream + code_size;
 
     for (i = 0; i < label_num; i++) {
         if (i == 0)

@@ -15,6 +15,7 @@ jit_pass_lower_cg(JitCompContext *cc)
 bool
 jit_pass_codegen(JitCompContext *cc)
 {
+//	printf("jit_pass_codegen\n");
     if (!jit_annl_enable_jitted_addr(cc))
         return false;
 
