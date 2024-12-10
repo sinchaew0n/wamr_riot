@@ -1476,6 +1476,7 @@ wasm_runtime_load(uint8 *buf, uint32 size, char *error_buf,
     srand(ztimer_now(ZTIMER_MSEC));
     int rand_num = rand();
     seg_red = rand_num & 0x1FFF0000;
+    printf("seg_red: %p\n", seg_red);
     return wasm_runtime_load_ex(buf, size, &args, error_buf, error_buf_size);
 }
 

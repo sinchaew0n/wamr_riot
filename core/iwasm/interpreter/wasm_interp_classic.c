@@ -72,7 +72,7 @@ typedef float64 CellType_F64;
 			} \
 		} else { \
 			if (offset < memory->heap_base) { \
-				if (offset < memory->stack_top) { \
+				if (offset < memory->stack_top + 8 || 1) { \
 					addr -= seg_red; maddr = memory->memory_data + offset - seg_red; /* stack */ \
 					check_shadow(offset - seg_red); \
 				} else { \
@@ -198,9 +198,10 @@ int set = 0, check = 0;
 
 /* CHA: function for setting shadow memory */
 void set_shadow(uint32 addr, int size, int value) {
+    //printf("set_shadow\n");
 	
 	//set++;
-    addr -= stack_segment_addr;
+    //printf("addr = %p, stack_segment_addr = %p\n", addr, stack_segment_addr);
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
 
     uint8 *shaddr;
@@ -217,10 +218,10 @@ void set_shadow(uint32 addr, int size, int value) {
 void check_shadow(uint32 addr) {
 
 	//check++;
-	//printf("check_shadow : addr %p\n");
+    //printf("check_shadow : addr %p\n", addr);
     if (addr > 0x80000000) return;
     if (addr > (uint32)linear_memory) addr -= (uint32)(linear_memory);
-    addr -= stack_segment_addr;
+    //addr -= stack_segment_addr;
 
     uint8 *shaddr = (uint8 *)(data_segment_start - (addr / 32) - 1);
     int idx = (addr / 4) % 8;
@@ -4423,7 +4424,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 CHECK_MEMORY_OVERFLOW(4);
                 PUSH_I32(LOAD_I32(maddr));
                 /* CHA: check shadow when loading */
-		//printf("WASM_OP_32_LOAD: addr %u, offset %u, maddr %u, value %u memory addr %u\n", addr, offset, maddr, LOAD_I32(maddr), memory->memory_data);
+		//printf("WASM_OP_32_LOAD: addr %p, offset %p, maddr %p, value %p memory addr %p\n", addr, offset, maddr, LOAD_I32(maddr), memory->memory_data);
                 //check_shadow(addr + offset);
                 /* CHA: finished */
                 //CHECK_READ_WATCHPOINT(addr, offset);
@@ -4657,7 +4658,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 addr = POP_MEM_OFFSET();
                 CHECK_MEMORY_OVERFLOW(4);
 		/* CHA: check shadow when storing */
-                //printf("WASM_OP_32_STORE: addr %u, offset %u, value %u\n", addr, offset, frame_sp[1]);
+                //printf("WASM_OP_32_STORE: addr %p, offset %p, value %p\n", addr, offset, frame_sp[1]);
                 //check_shadow(addr + offset);
                 /* CHA: finished */
                 /* CHA: if issp, issp = false */
@@ -5088,15 +5089,24 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
             {
 		   // printf("WASM_OP_I32_SUB\n");
 		if (*(uint32 *)(frame_sp - 2) != *(uint32 *)(get_global_addr(global_data, globals)) 
-				|| *(uint32 *)(frame_sp - 2) + *(uint32 *)(frame_sp - 1) > memory->memory_data_size) 
+				/*|| *(uint32 *)(frame_sp - 2) + *(uint32 *)(frame_sp - 1) > memory->memory_data_size*/) {
 			issp = false;
+		}
                 DEF_OP_NUMERIC(uint32, uint32, I32, -);
 		if(issp && iscall) {
 			//printf("OP_I32_SUB: set_shadow\n");
 			/* CHA: making redzone and setting shadow memory for redzone */
+			printf("making redzone...\n");
 			*(uint32 *)(frame_sp - 1) -= RED_SIZE;
-			set_shadow(*(uint32 *)(frame_sp - 1) + *(uint32 *)(frame_sp), RED_SIZE, 1);
-                	set_shadow(*(uint32 *)(frame_sp - 1), *(uint32 *)(frame_sp), 0);
+			set_shadow(*(uint32 *)(frame_sp - 1) + *(uint32 *)(frame_sp) - seg_red, RED_SIZE, 1);
+                	set_shadow(*(uint32 *)(frame_sp - 1) - seg_red, *(uint32 *)(frame_sp), 0);
+			//set_shadow(*(uint32 *)(frame_sp - 1) - RED_SIZE - seg_red, RED_SIZE, 1);
+			printf("stack: %p ~ %p, redzone: %p ~ %p\n", 
+					*(uint32 *)(frame_sp - 1) - seg_red, 
+					*(uint32 *)(frame_sp - 1) + *(uint32 *)(frame_sp) - seg_red, 
+					*(uint32 *)(frame_sp - 1) + *(uint32 *)(frame_sp) - seg_red, 
+					*(uint32 *)(frame_sp - 1) + *(uint32 *)(frame_sp) - seg_red + RED_SIZE);
+			//set_shadow(*(uint32 *)(frame_sp - 1) - *(uint32 *)(frame_sp) - RED_SIZE - seg_red, RED_SIZE, 1);
 			iscall = false;
 			issp = false;
                 }
@@ -7482,9 +7492,10 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
 	    /* CHA: modify main's argument address */
 	    for (int i = 0; i < argc; i++) {
 		   // printf("... %u\n", *(argv + 1));
-		    *(uint32 *)(memory->memory_data + *(argv + 1) + i * 4) += seg_red * 2;
+		    *(uint32 *)(memory->memory_data + *(argv + 1) + i * 4) += seg_red;
+		    printf("main's argument address: %p\n", *(uint32 *)(memory->memory_data + *(argv + 1) + i * 4));
 	    }
-	    *(argv + 1) += seg_red * 2;
+	    *(argv + 1) += seg_red;
 	    /* CHA: finished */
             word_copy(outs_area->lp, argv, argc);
 	}
@@ -7540,7 +7551,10 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
     /* CHA: setting shadow memories for global and stack memory */
     set_shadow(memory->stack_base - seg_red,
                     memory->stack_top - memory->stack_base, 0);
+    printf("memory->stack_base: %p\n", memory->stack_base - seg_red);
     set_shadow(memory->heap_base - seg_red * 2, memory->heap_top - memory->heap_base, 1);
+
+    stack_segment_addr += seg_red;
 
     //printf("global top %p, stack base %p, stack top %p\n", memory->data_top, memory->stack_base, memory->stack_top);
     /* CHA: finished */
